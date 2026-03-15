@@ -67,7 +67,10 @@ export function PDFViewer({ file, pageNumber, onLoadSuccess, width: forcedWidth,
 
   const fileObj = useMemo(() => {
     if (!file) return null;
-    return { data: file };
+    // Clone the ArrayBuffer to prevent DataCloneError if multiple PDFViewers 
+    // try to consume the exact same underlying buffer, detaching it for others.
+    const bufferCopy = file.slice(0);
+    return { data: bufferCopy };
   }, [file]);
 
   if (!fileObj) {
