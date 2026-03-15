@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+out
+build
+
+# Version control
+.git
+.gitignore
+
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+*.md
+LICENSE
+sample.pdf
+.env*
+.vercel
