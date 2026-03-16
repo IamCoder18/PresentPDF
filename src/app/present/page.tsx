@@ -34,9 +34,7 @@ function extractBackgroundColor(canvas: HTMLCanvasElement): string {
   try {
     const w = canvas.width;
     const h = canvas.height;
-    console.log(`[BG Extract] Canvas dimensions: ${w}x${h}`);
     if (w === 0 || h === 0) {
-      console.warn('[BG Extract] Canvas has zero dimensions');
       return '#000000';
     }
 
@@ -44,7 +42,6 @@ function extractBackgroundColor(canvas: HTMLCanvasElement): string {
     const MARGIN = Math.min(5, Math.floor(w / 10), Math.floor(h / 10));
     const innerW = w - 2 * MARGIN;
     const innerH = h - 2 * MARGIN;
-    console.log(`[BG Extract] MARGIN=${MARGIN}, innerW=${innerW}, innerH=${innerH}`);
     if (innerW <= 0 || innerH <= 0) return '#000000';
 
     const samples: [number, number, number][] = [];
@@ -60,8 +57,6 @@ function extractBackgroundColor(canvas: HTMLCanvasElement): string {
       samples.push(samplePixel(canvas, MARGIN, y));            // Left edge
       samples.push(samplePixel(canvas, w - MARGIN - 1, y));   // Right edge
     }
-
-    console.log(`[BG Extract] Sampled ${samples.length} pixels. First 4:`, samples.slice(0, 4));
 
     // Cluster similar colors (Manhattan distance threshold)
     const THRESHOLD = 30;
@@ -86,11 +81,8 @@ function extractBackgroundColor(canvas: HTMLCanvasElement): string {
     }
 
     groups.sort((a, b) => b.count - a.count);
-    console.log(`[BG Extract] Color groups:`, groups.map(g => `rgb(${g.color.join(',')}) x${g.count}`));
     const [r, g, b] = groups[0].color;
-    const result = `rgb(${r}, ${g}, ${b})`;
-    console.log(`[BG Extract] Final color: ${result}`);
-    return result;
+    return `rgb(${r}, ${g}, ${b})`;
   } catch (e) {
     console.error('[BG Extract] FAILED:', e);
     return '#000000';
@@ -116,7 +108,9 @@ function PresentContent() {
   }, [id]);
 
   const handleNext = useCallback(() => {
-    if (currentSlide < numPages) {
+    if (numPages > 0 && currentSlide < numPages) {
+      setSyncState({ currentSlide: currentSlide + 1 });
+    } else if (numPages === 0) {
       setSyncState({ currentSlide: currentSlide + 1 });
     }
   }, [currentSlide, numPages, setSyncState]);
@@ -137,9 +131,7 @@ function PresentContent() {
   }, [handlePrev, handleNext]);
 
   const handleRenderSuccess = useCallback((canvas: HTMLCanvasElement) => {
-    console.log(`[Present] handleRenderSuccess called, canvas=${canvas.width}x${canvas.height}`);
     const color = extractBackgroundColor(canvas);
-    console.log(`[Present] Setting bgColor to: ${color}`);
     setBgColor(color);
   }, []);
 
@@ -155,16 +147,27 @@ function PresentContent() {
     }
   }, [currentSlide, fileData]);
 
-  if (!id) return <div className="p-8 text-black min-h-screen bg-[#EBFF00] font-mono text-4xl uppercase font-black uppercase flex items-center justify-center">ERROR: NO_ID_PROVIDED</div>;
-  if (!fileData) return (
-    <div className="min-h-screen bg-black text-white font-mono flex flex-col items-center justify-center p-8 border-[20px] border-white">
-      <div className="w-24 h-24 border-[12px] border-white border-t-[#00F0FF] animate-spin mb-12 shadow-[12px_12px_0px_#FF00FF]" />
-      <div className="text-4xl font-black uppercase tracking-[0.2em] animate-pulse text-center">
-        INIT.PRESENTATION_STREAM...
+  if (!id) return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center font-sans">
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl font-bold">Session Not Found</h2>
+        <p className="text-slate-400">No presentation ID provided.</p>
       </div>
-      <div className="mt-8 text-xs opacity-50 font-bold uppercase tracking-widest">{`UPLINK_ID: ${id?.substring(0,16)}`}</div>
     </div>
   );
+
+  if (!fileData) return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center font-sans p-8">
+      <div className="w-16 h-16 border-4 border-slate-800 border-t-blue-500 rounded-full animate-spin mb-8" />
+      <div className="text-2xl font-semibold tracking-tight animate-pulse text-center">
+        Preparing Presentation...
+      </div>
+      <div className="mt-4 text-sm text-slate-500 font-mono">
+        ID: {id?.substring(0, 12)}...
+      </div>
+    </div>
+  );
+
   return (
     <div
       className="fixed inset-0 flex items-center justify-center overflow-hidden"
@@ -189,4 +192,3 @@ export default function PresentPage() {
     </Suspense>
   );
 }
-

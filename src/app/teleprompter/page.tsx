@@ -6,7 +6,7 @@ import { getNotes, getPDF } from '@/lib/storage';
 import { useSyncState } from '@/hooks/useSyncState';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Settings, Maximize } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, Maximize, AlertCircle } from 'lucide-react';
 
 const PDFViewer = dynamic(() => import('@/components/pdf/PDFViewer').then(mod => mod.PDFViewer), {
   ssr: false
@@ -19,6 +19,7 @@ function TeleprompterContent() {
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [fontSize, setFontSize] = useState(64); // default large font
   const [mirror, setMirror] = useState(false);
+  const [numPages, setNumPages] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const { state, setSyncState } = useSyncState();
@@ -65,8 +66,12 @@ function TeleprompterContent() {
   }, [currentSlide, setSyncState]);
 
   const handleNext = useCallback(() => {
-    setSyncState({ currentSlide: currentSlide + 1 });
-  }, [currentSlide, setSyncState]);
+    if (numPages > 0 && currentSlide < numPages) {
+      setSyncState({ currentSlide: currentSlide + 1 });
+    } else if (numPages === 0) {
+      setSyncState({ currentSlide: currentSlide + 1 });
+    }
+  }, [currentSlide, numPages, setSyncState]);
 
   // Keyboard navigation for teleprompter
   useEffect(() => {
@@ -109,113 +114,118 @@ function TeleprompterContent() {
   };
 
   if (!id) return (
-    <div className="p-8 text-black min-h-screen bg-[#EBFF00] font-mono text-2xl uppercase font-black flex items-center justify-center">
-      ERROR: NO_ID_PROVIDED
+    <div className="p-8 text-slate-900 min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+      <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center space-y-4 max-w-md">
+         <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-6 h-6" />
+         </div>
+         <h2 className="text-xl font-bold">Session Not Found</h2>
+         <p className="text-slate-500">No presentation ID provided. Please return to the control panel or homepage.</p>
+      </div>
     </div>
   );
 
   const currentText = notes[currentSlide] || "No notes for this slide.";
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-black text-white font-sans flex flex-col selection:bg-white selection:text-black">
+    <div className="h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-blue-500/30 selection:text-white">
       
       {/* Hidden Settings Bar - Shows on Hover at top */}
-      <div className="absolute top-0 left-0 right-0 h-16 bg-zinc-900/90 border-b border-white/20 flex items-center gap-6 px-6 z-50 transform -translate-y-full hover:translate-y-0 transition-transform duration-300">
-        <div className="flex items-center gap-2 text-[#00F0FF] font-mono font-bold uppercase tracking-widest text-sm">
-          <Settings className="w-5 h-5" />
+      <div className="absolute top-0 left-0 right-0 h-16 bg-slate-900/95 border-b border-slate-800 flex items-center gap-6 px-6 z-50 transform -translate-y-full hover:translate-y-0 transition-transform duration-300 shadow-xl backdrop-blur-md">
+        <div className="flex items-center gap-2 text-slate-300 font-medium text-sm">
+          <Settings className="w-4 h-4" />
           Teleprompter Settings
         </div>
         
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
-          <span className="text-xs font-mono text-white/50 uppercase tracking-widest">Text Size</span>
+          <span className="text-xs font-medium text-slate-400">Text Size</span>
           <input 
             type="range" 
             min="32" 
             max="120" 
             value={fontSize} 
             onChange={(e) => setFontSize(Number(e.target.value))}
-            className="w-32 accent-[#EBFF00]"
+            className="w-32 accent-blue-500"
           />
         </div>
 
         <div className="flex items-center gap-4">
-          <span className="text-xs font-mono text-white/50 uppercase tracking-widest">Mirror Mode</span>
+          <span className="text-xs font-medium text-slate-400">Mirror Mode</span>
           <button 
             onClick={() => setMirror(!mirror)}
-            className={`w-12 h-6 rounded-full border-2 border-white/20 transition-colors relative ${mirror ? 'bg-[#00F0FF]' : 'bg-transparent'}`}
+            className={`w-11 h-6 rounded-full transition-colors relative shadow-inner ${mirror ? 'bg-blue-500' : 'bg-slate-700'}`}
           >
-            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${mirror ? 'left-[26px]' : 'left-0.5'}`} />
+            <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${mirror ? 'left-[22px]' : 'left-1'}`} />
           </button>
         </div>
 
+        <div className="w-px h-6 bg-slate-800" />
+
         <button 
           onClick={toggleFullscreen}
-          className="text-white hover:text-[#EBFF00] transition-colors mt-0.5"
+          className="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800"
           title="Toggle Fullscreen"
         >
-          <Maximize className="w-5 h-5" />
+          <Maximize className="w-4 h-4" />
         </button>
       </div>
 
       {/* Main Scroller Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-12 md:px-32 pt-[15vh] pb-[40vh] scroll-smooth"
+        className="flex-1 overflow-y-auto px-12 md:px-32 pt-[20vh] pb-[40vh] scroll-smooth"
         style={{
           transform: mirror ? 'scaleX(-1)' : 'none',
         }}
       >
          <div 
-           className="max-w-[1200px] mx-auto w-full font-bold whitespace-pre-wrap leading-[1.4] tracking-tight"
+           className="max-w-[1200px] mx-auto w-full font-medium whitespace-pre-wrap leading-[1.5] tracking-tight text-slate-100"
            style={{ 
              fontSize: `${fontSize}px`,
-             textShadow: '0 4px 12px rgba(0,0,0,0.8)'
            }}
          >
            {currentText}
          </div>
       </div>
 
-      {/* Slide Navigation Overlay Component - Hidden visually but acts as touch targets if needed, or we use explicit buttons.
-          Let's add subtle gradient edges that act as previous / next touch targets. */}
-      
+      {/* Slide Navigation Overlay Components */}
       <div 
-        className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black/50 to-transparent flex items-center justify-start p-4 hover:from-black/80 transition-colors cursor-pointer group z-40"
+        className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-slate-950 via-slate-950/50 to-transparent flex items-center justify-start p-6 hover:from-slate-900 transition-colors cursor-pointer group z-40 opacity-0 hover:opacity-100"
         onClick={handlePrev}
       >
-        <ChevronLeft className="w-16 h-16 text-white/20 group-hover:text-white group-active:text-[#EBFF00] transition-all group-hover:-translate-x-2" />
+        <ChevronLeft className="w-16 h-16 text-slate-400 group-hover:text-white transition-all group-hover:-translate-x-2" />
       </div>
 
       <div 
-        className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black/50 to-transparent flex items-center justify-end p-4 hover:from-black/80 transition-colors cursor-pointer group z-40"
+        className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-slate-950 via-slate-950/50 to-transparent flex items-center justify-end p-6 hover:from-slate-900 transition-colors cursor-pointer group z-40 opacity-0 hover:opacity-100"
         onClick={handleNext}
       >
-        <ChevronRight className="w-16 h-16 text-white/20 group-hover:text-white group-active:text-[#EBFF00] transition-all group-hover:translate-x-2" />
+        <ChevronRight className="w-16 h-16 text-slate-400 group-hover:text-white transition-all group-hover:translate-x-2" />
       </div>
 
-      {/* Absolute Slide Indicator (Bottom Center) - Toned down so it doesn't distract */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-        <div className="bg-zinc-900/80 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 text-white/50 font-mono text-lg font-bold">
-          SLIDE <span className="text-[#00F0FF]">{currentSlide}</span>
+      {/* Absolute Slide Indicator (Bottom Center) */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-none transition-opacity duration-300 opacity-30">
+        <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full border border-slate-800/50 text-slate-400 font-medium text-sm flex items-center gap-2 shadow-xl">
+          Slide <span className="text-white font-bold">{currentSlide}</span>
         </div>
       </div>
 
       {/* Focus Indicator / Reading Line */}
-      <div className="absolute top-[20%] left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#EBFF00]/30 to-transparent pointer-events-none -z-10" />
+      <div className="absolute top-[25%] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/20 to-transparent pointer-events-none -z-10" />
 
       {/* Slide Preview (Bottom Right / Corner) */}
       {pdfData && (
         <>
-          <div className="absolute bottom-6 right-6 w-48 xl:w-64 aspect-video border-2 border-white/20 bg-black shadow-2xl z-[60] pointer-events-none hidden sm:block">
-             <PDFViewer file={pdfData} pageNumber={currentSlide} />
-             <div className="absolute top-0 right-0 bg-[#00F0FF] text-black px-1.5 py-0.5 text-[10px] font-bold uppercase z-10">
-               LIVE
+          <div className="absolute bottom-8 right-8 w-48 xl:w-64 aspect-video border border-slate-800 rounded-xl bg-slate-900 shadow-2xl z-[60] pointer-events-none hidden sm:block overflow-hidden opacity-50 transition-opacity hover:opacity-100">
+             <PDFViewer file={pdfData} pageNumber={currentSlide} onLoadSuccess={setNumPages} />
+             <div className="absolute top-2 right-2 bg-blue-500/90 backdrop-blur text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase z-10 shadow-sm">
+               Live
              </div>
           </div>
-          <div className="absolute bottom-20 right-4 w-32 aspect-video border border-white/20 bg-black shadow-2xl z-[60] pointer-events-none sm:hidden">
-             <PDFViewer file={pdfData} pageNumber={currentSlide} />
+          <div className="absolute bottom-20 right-4 w-32 aspect-video border border-slate-800 rounded-lg bg-slate-900 shadow-2xl z-[60] pointer-events-none sm:hidden overflow-hidden opacity-50">
+             <PDFViewer file={pdfData} pageNumber={currentSlide} onLoadSuccess={setNumPages} />
           </div>
         </>
       )}
@@ -226,7 +236,7 @@ function TeleprompterContent() {
 
 export default function TeleprompterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black text-white p-8 font-mono">Loading Teleprompter...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-950 text-slate-400 p-8 font-sans flex items-center justify-center">Loading Teleprompter...</div>}>
       <TeleprompterContent />
     </Suspense>
   );
