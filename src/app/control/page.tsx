@@ -69,8 +69,13 @@ function ControlPanelContent() {
   }, [currentSlide, setSyncState]);
 
   const handleNext = useCallback(() => {
-    setSyncState({ currentSlide: currentSlide + 1 });
-  }, [currentSlide, setSyncState]);
+    if (numPages > 0 && currentSlide < numPages) {
+      setSyncState({ currentSlide: currentSlide + 1 });
+    } else if (numPages === 0) {
+       // fallback if numpages isn't fully loaded yet
+       setSyncState({ currentSlide: currentSlide + 1 });
+    }
+  }, [currentSlide, numPages, setSyncState]);
 
   // Keyboard navigation
   useEffect(() => {
