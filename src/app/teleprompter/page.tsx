@@ -19,6 +19,7 @@ function TeleprompterContent() {
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [fontSize, setFontSize] = useState(64); // default large font
   const [mirror, setMirror] = useState(false);
+  const [numPages, setNumPages] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const { state, setSyncState } = useSyncState();
@@ -65,8 +66,12 @@ function TeleprompterContent() {
   }, [currentSlide, setSyncState]);
 
   const handleNext = useCallback(() => {
-    setSyncState({ currentSlide: currentSlide + 1 });
-  }, [currentSlide, setSyncState]);
+    if (numPages > 0 && currentSlide < numPages) {
+      setSyncState({ currentSlide: currentSlide + 1 });
+    } else if (numPages === 0) {
+      setSyncState({ currentSlide: currentSlide + 1 });
+    }
+  }, [currentSlide, numPages, setSyncState]);
 
   // Keyboard navigation for teleprompter
   useEffect(() => {
@@ -214,13 +219,13 @@ function TeleprompterContent() {
       {pdfData && (
         <>
           <div className="absolute bottom-8 right-8 w-48 xl:w-64 aspect-video border border-slate-800 rounded-xl bg-slate-900 shadow-2xl z-[60] pointer-events-none hidden sm:block overflow-hidden opacity-50 transition-opacity hover:opacity-100">
-             <PDFViewer file={pdfData} pageNumber={currentSlide} />
+             <PDFViewer file={pdfData} pageNumber={currentSlide} onLoadSuccess={setNumPages} />
              <div className="absolute top-2 right-2 bg-blue-500/90 backdrop-blur text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase z-10 shadow-sm">
                Live
              </div>
           </div>
           <div className="absolute bottom-20 right-4 w-32 aspect-video border border-slate-800 rounded-lg bg-slate-900 shadow-2xl z-[60] pointer-events-none sm:hidden overflow-hidden opacity-50">
-             <PDFViewer file={pdfData} pageNumber={currentSlide} />
+             <PDFViewer file={pdfData} pageNumber={currentSlide} onLoadSuccess={setNumPages} />
           </div>
         </>
       )}

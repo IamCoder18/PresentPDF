@@ -108,7 +108,9 @@ function PresentContent() {
   }, [id]);
 
   const handleNext = useCallback(() => {
-    if (currentSlide < numPages) {
+    if (numPages > 0 && currentSlide < numPages) {
+      setSyncState({ currentSlide: currentSlide + 1 });
+    } else if (numPages === 0) {
       setSyncState({ currentSlide: currentSlide + 1 });
     }
   }, [currentSlide, numPages, setSyncState]);
